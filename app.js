@@ -44,21 +44,25 @@ chart.data = [{
 
 const dataArr = [
     {
+        id: 1,
         session: "جلسه یک",
         startTime: 0,
         endTime: 7
     },
     {
+        id: 2,
         session: "جلسه دو",
         startTime: 7,
         endTime: 14
     },
     {
+        id: 3,
         session: "جلسه سه",
         startTime: 14,
         endTime: 25
     },
     {
+        id: 4,
         session: "جلسه چهار",
         startTime: 15,
         endTime: 19
@@ -205,6 +209,9 @@ function handleDragRight(event) {
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
     // set new value
     dataItem.valueX = value;
+    // update data array
+    const dataObj = dataArr.find(element => element.session === dataItem.dataContext.session);
+    dataObj.endTime = value;
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // expand chart
@@ -221,6 +228,9 @@ function handleDragLeft(event) {
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
     // set new value
     dataItem.openValueX = value;
+    // update data array
+    const dataObj = dataArr.find(element => element.session === dataItem.dataContext.session);
+    dataObj.startTime = value;
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // restrictions
@@ -245,6 +255,10 @@ function handleDragCenter(event) {
         dataItem.openValueX = dataItem.openValueX + dx;
         dataItem.valueX = dataItem.valueX + dx;
         test = centerValue[centerValue.length - 1];
+        // update data array
+        const dataObj = dataArr.find(element => element.session === dataItem.dataContext.session);
+        dataObj.startTime = dataItem.openValueX;
+        dataObj.endTime = dataItem.valueX;
     }
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
