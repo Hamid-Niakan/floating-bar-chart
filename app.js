@@ -17,24 +17,28 @@ am4core.useTheme(am4themes_animated);
 var chart = am4core.create("chartdiv", am4charts.XYChart);
 
 chart.data = [{
+    "id": 1,
     "session": "جلسه یک",
     "startTime": 0,
     "endTime": 7,
     "color": chart.colors.next(),
     "title": "درس اول"
 }, {
+    "id": 2,
     "session": "جلسه دو",
     "startTime": 7,
     "endTime": 14,
     "color": chart.colors.next(),
     "title": "درس دوم"
 }, {
+    "id": 3,
     "session": "جلسه سه",
     "startTime": 14,
     "endTime": 25,
     "color": chart.colors.next(),
     "title": "درس سوم"
 }, {
+    "id": 4,
     "session": "جلسه چهار",
     "startTime": 15,
     "endTime": 19,
@@ -42,32 +46,9 @@ chart.data = [{
     "title": "درس چهارم"
 }];
 
-const dataArr = [
-    {
-        id: 1,
-        session: "جلسه یک",
-        startTime: 0,
-        endTime: 7
-    },
-    {
-        id: 2,
-        session: "جلسه دو",
-        startTime: 7,
-        endTime: 14
-    },
-    {
-        id: 3,
-        session: "جلسه سه",
-        startTime: 14,
-        endTime: 25
-    },
-    {
-        id: 4,
-        session: "جلسه چهار",
-        startTime: 15,
-        endTime: 19
-    }
-];
+const dataArr = [...chart.data];
+
+var restrict = true;
 
 chart.padding(40, 40, 0, 0);
 chart.maskBullets = false; // allow bullets to go out of plot area
@@ -203,15 +184,18 @@ circleBulletCenter.events.on("dragstop", event => {
     test = null;
 });
 
+circleBulletCenter.events.on("click", event => {
+    console.log(event);
+})
+
 function handleDragRight(event) {
     var dataItem = event.target.dataItem;
+    var id = dataItem.dataContext.id;
+    var bar = dataArr.find(element => element.id === id);
     // convert coordinate to value
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
-    // set new value
-    dataItem.valueX = value;
-    // update data array
-    const dataObj = dataArr.find(element => element.session === dataItem.dataContext.session);
-    dataObj.endTime = value;
+    // set new value & update data array
+    dataItem.valueX = bar.endTime = value;
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // expand chart
@@ -220,26 +204,31 @@ function handleDragRight(event) {
     // restrictions
     if (dataItem.valueX <= dataItem.openValueX)
         dataItem.valueX = dataItem.openValueX + 1;
+    if (restrict)
+        restrictionResize(event, id, bar);
 }
 
 function handleDragLeft(event) {
     var dataItem = event.target.dataItem;
+    var id = dataItem.dataContext.id;
+    var bar = dataArr.find(element => element.id === id);
     // convert coordinate to value
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
-    // set new value
-    dataItem.openValueX = value;
-    // update data array
-    const dataObj = dataArr.find(element => element.session === dataItem.dataContext.session);
-    dataObj.startTime = value;
+    // set new value & update data array
+    dataItem.openValueX = bar.startTime = value;
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // restrictions
     if (dataItem.valueX <= dataItem.openValueX)
         dataItem.openValueX = dataItem.valueX - 1;
+    if (restrict)
+        restrictionResize(event, id, bar);
 }
 
 function handleDragCenter(event) {
     var dataItem = event.target.dataItem;
+    var id = dataItem.dataContext.id;
+    var bar = dataArr.find(element => element.id === id);
     // convert coordinate to value
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
     if (centerValue === [])
@@ -252,13 +241,9 @@ function handleDragCenter(event) {
 
     if (centerValue.length === 2 && test !== centerValue[centerValue.length - 1]) {
         var dx = centerValue[1] - centerValue[0];
-        dataItem.openValueX = dataItem.openValueX + dx;
-        dataItem.valueX = dataItem.valueX + dx;
+        dataItem.openValueX = bar.startTime = dataItem.openValueX + dx;
+        dataItem.valueX = bar.endTime = dataItem.valueX + dx;
         test = centerValue[centerValue.length - 1];
-        // update data array
-        const dataObj = dataArr.find(element => element.session === dataItem.dataContext.session);
-        dataObj.startTime = dataItem.openValueX;
-        dataObj.endTime = dataItem.valueX;
     }
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
@@ -268,7 +253,26 @@ function handleDragCenter(event) {
 }
 
 //---------- restriction
-function restriction() {
+function restrictionResize(event, id, bar) {
+    var dataItem = event.target.dataItem;
+    var barsNo = dataArr.length;
+    var beforeBar = dataArr.find(element => element.id === id - 1);
+    var afterBar = dataArr.find(element => element.id === id + 1);
+
+    if (id === 1 && dataItem.valueX > afterBar.startTime) {
+        dataItem.valueX = bar.endTime = afterBar.startTime;
+    } else if (id === barsNo && dataItem.openValueX < beforeBar.endTime) {
+        dataItem.openValueX = bar.startTime = beforeBar.endTime;
+    } else if (id !== 1 && id !== barsNo) {
+        if (dataItem.openValueX < beforeBar.endTime) {
+            dataItem.openValueX = bar.startTime = beforeBar.endTime;
+        } else if (dataItem.valueX > afterBar.startTime) {
+            dataItem.valueX = bar.endTime = afterBar.startTime;
+        }
+    }
+}
+
+function restrictionDrag(event, id, bar) {
 
 }
 
