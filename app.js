@@ -10,6 +10,17 @@
  * ---------------------------------------
  */
 
+
+var restrict = false;
+
+var btn = document.querySelector('button');
+
+btn.addEventListener('click', () => {
+    restrict = !restrict;
+    if (restrict)
+        correctOrder();
+});
+
 //---------- Themes begin
 am4core.useTheme(am4themes_animated);
 //---------- Themes end
@@ -45,10 +56,6 @@ chart.data = [{
     "color": chart.colors.next(),
     "title": "درس چهارم"
 }];
-
-const dataArr = [...chart.data];
-
-var restrict = true;
 
 chart.padding(40, 40, 0, 0);
 chart.maskBullets = false; // allow bullets to go out of plot area
@@ -191,7 +198,7 @@ circleBulletCenter.events.on("click", event => {
 function handleDragRight(event) {
     var dataItem = event.target.dataItem;
     var id = dataItem.dataContext.id;
-    var bar = dataArr.find(element => element.id === id);
+    var bar = chart.data.find(element => element.id === id);
     // convert coordinate to value
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
     // set new value & update data array
@@ -199,19 +206,19 @@ function handleDragRight(event) {
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // expand chart
-    if (dataItem.valueX === valueAxis.max)
+    if (dataItem.valueX >= valueAxis.max)
         valueAxis.max += 30;
     // restrictions
     if (dataItem.valueX <= dataItem.openValueX)
         dataItem.valueX = dataItem.openValueX + 1;
     if (restrict)
-        restrictionResize(event, id, bar);
+        restrictResize(dataItem, id, bar);
 }
 
 function handleDragLeft(event) {
     var dataItem = event.target.dataItem;
     var id = dataItem.dataContext.id;
-    var bar = dataArr.find(element => element.id === id);
+    var bar = chart.data.find(element => element.id === id);
     // convert coordinate to value
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
     // set new value & update data array
@@ -222,13 +229,13 @@ function handleDragLeft(event) {
     if (dataItem.valueX <= dataItem.openValueX)
         dataItem.openValueX = dataItem.valueX - 1;
     if (restrict)
-        restrictionResize(event, id, bar);
+        restrictResize(dataItem, id, bar);
 }
 
 function handleDragCenter(event) {
     var dataItem = event.target.dataItem;
     var id = dataItem.dataContext.id;
-    var bar = dataArr.find(element => element.id === id);
+    var bar = chart.data.find(element => element.id === id);
     // convert coordinate to value
     var value = Math.round(valueAxis.xToValue(event.target.pixelX));
     if (centerValue === [])
@@ -248,16 +255,15 @@ function handleDragCenter(event) {
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // expand chart
-    if (dataItem.valueX === valueAxis.max)
+    if (dataItem.valueX >= valueAxis.max)
         valueAxis.max += 30;
 }
 
 //---------- restriction
-function restrictionResize(event, id, bar) {
-    var dataItem = event.target.dataItem;
-    var barsNo = dataArr.length;
-    var beforeBar = dataArr.find(element => element.id === id - 1);
-    var afterBar = dataArr.find(element => element.id === id + 1);
+function restrictResize(dataItem, id, bar) {
+    var barsNo = chart.data.length;
+    var beforeBar = chart.data.find(element => element.id === id - 1);
+    var afterBar = chart.data.find(element => element.id === id + 1);
 
     if (id === 1 && dataItem.valueX > afterBar.startTime) {
         dataItem.valueX = bar.endTime = afterBar.startTime;
@@ -272,8 +278,26 @@ function restrictionResize(event, id, bar) {
     }
 }
 
-function restrictionDrag(event, id, bar) {
-
+function correctOrder() {
+    let lastEnd;
+    let width;
+    chart.data.forEach(element => {
+        if (element.id > 1) {
+            width = element.endTime - element.startTime;
+            if (element.startTime < lastEnd) {
+                element.startTime = lastEnd;
+                element.endTime = lastEnd + width;
+            }
+            if (element.endTime >= valueAxis.max) {
+                valueAxis.max += 30;
+                valueAxis.axisRanges.clear();
+                console.log(valueAxis.max);
+                autoRange(60);
+            }
+        }
+        lastEnd = element.endTime;
+    });
+    chart.invalidateRawData();
 }
 
 //---------- start dragging bullet even if we hit on column not just a bullet, this will make it more friendly for touch devices
