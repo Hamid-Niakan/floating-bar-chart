@@ -175,8 +175,6 @@ circleBulletCenter.events.on("drag", event => {
 
 circleBulletRight.events.on("dragstop", event => {
     handleDragRight(event);
-    valueAxis.axisRanges.clear();
-    autoRange(valueAxis.max);
 });
 
 circleBulletLeft.events.on("dragstop", event => {
@@ -185,8 +183,6 @@ circleBulletLeft.events.on("dragstop", event => {
 
 circleBulletCenter.events.on("dragstop", event => {
     handleDragCenter(event);
-    valueAxis.axisRanges.clear();
-    autoRange(valueAxis.max);
     centerValue = [];
     test = null;
 });
@@ -206,8 +202,11 @@ function handleDragRight(event) {
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // expand chart
-    if (dataItem.valueX >= valueAxis.max)
-        valueAxis.max += 30;
+    if (dataItem.valueX >= valueAxis.max) {
+        const newRange = valueAxis.max += 30;
+        valueAxis.axisRanges.clear();
+        autoRange(newRange);
+    }
     // restrictions
     if (dataItem.valueX <= dataItem.openValueX)
         dataItem.valueX = dataItem.openValueX + 1;
@@ -250,13 +249,19 @@ function handleDragCenter(event) {
         var dx = centerValue[1] - centerValue[0];
         dataItem.openValueX = bar.startTime = dataItem.openValueX + dx;
         dataItem.valueX = bar.endTime = dataItem.valueX + dx;
+        if (restrict)
+            restrictDrag(dataItem, id, bar, dx);
         test = centerValue[centerValue.length - 1];
     }
     // hide tooltip not to interrupt
     dataItem.column.hideTooltip(0);
     // expand chart
-    if (dataItem.valueX >= valueAxis.max)
-        valueAxis.max += 30;
+    if (dataItem.valueX >= valueAxis.max) {
+        const newRange = valueAxis.max += 30;
+        valueAxis.axisRanges.clear();
+        autoRange(newRange);
+    }
+    // restriction
 }
 
 //---------- restriction
@@ -278,6 +283,28 @@ function restrictResize(dataItem, id, bar) {
     }
 }
 
+function restrictDrag(dataItem, id, bar, dx) {
+    var barsNo = chart.data.length;
+    var beforeBar = chart.data.find(element => element.id === id - 1);
+    var afterBar = chart.data.find(element => element.id === id + 1);
+
+    if (id === 1 && dataItem.valueX > afterBar.startTime) {
+        dataItem.openValueX = bar.startTime = dataItem.openValueX - dx;
+        dataItem.valueX = bar.endTime = dataItem.valueX - dx;
+    } else if (id === barsNo && dataItem.openValueX < beforeBar.endTime) {
+        dataItem.openValueX = bar.startTime = dataItem.openValueX - dx;
+        dataItem.valueX = bar.endTime = dataItem.valueX - dx;
+    } else if (id !== 1 && id !== barsNo) {
+        if (dataItem.openValueX < beforeBar.endTime) {
+            dataItem.openValueX = bar.startTime = dataItem.openValueX - dx;
+            dataItem.valueX = bar.endTime = dataItem.valueX - dx;
+        } else if (dataItem.valueX > afterBar.startTime) {
+            dataItem.openValueX = bar.startTime = dataItem.openValueX - dx;
+            dataItem.valueX = bar.endTime = dataItem.valueX - dx;
+        }
+    }
+}
+
 function correctOrder() {
     let lastEnd;
     let width;
@@ -289,10 +316,9 @@ function correctOrder() {
                 element.endTime = lastEnd + width;
             }
             if (element.endTime >= valueAxis.max) {
-                valueAxis.max += 30;
+                const newRange = valueAxis.max += 30;
                 valueAxis.axisRanges.clear();
-                console.log(valueAxis.max);
-                autoRange(60);
+                autoRange(newRange);
             }
         }
         lastEnd = element.endTime;
